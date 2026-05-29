@@ -12,6 +12,7 @@ export default function Navbar() {
   const teacherLinks = [
     { href: '/teacher/dashboard', label: 'Задания' },
     { href: '/teacher/assignments/new', label: 'Создать задание' },
+    { href: '/teacher/students', label: 'Студенты' },
   ]
 
   const studentLinks = [
