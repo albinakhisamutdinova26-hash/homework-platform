@@ -31,6 +31,7 @@ interface SubmissionData {
   grade: number | null
   feedback: string | null
   textAnswer: string | null
+  voiceUrl: string | null
   submittedAt: string
   gradedAt: string | null
   student: { name: string }
@@ -81,10 +82,7 @@ export default function GradeSubmissionPage() {
   }, [submissionId])
 
   const handleSave = async () => {
-    if (!grade) {
-      setError('Введите оценку')
-      return
-    }
+    if (!grade) { setError('Введите оценку'); return }
     const gradeNum = parseInt(grade)
     if (isNaN(gradeNum) || gradeNum < 0 || gradeNum > 100) {
       setError('Оценка должна быть от 0 до 100')
@@ -108,9 +106,7 @@ export default function GradeSubmissionPage() {
       }
 
       setSuccess(true)
-      setTimeout(() => {
-        router.push(`/teacher/assignments/${assignmentId}`)
-      }, 1500)
+      setTimeout(() => router.push(`/teacher/assignments/${assignmentId}`), 1500)
     } catch {
       setError('Произошла ошибка')
       setSaving(false)
@@ -129,25 +125,19 @@ export default function GradeSubmissionPage() {
     return (
       <div className="text-center py-16">
         <p className="text-gray-500">Работа не найдена</p>
-        <Link href="/teacher/dashboard" className="text-purple-600 hover:underline mt-2 inline-block">
-          На главную
-        </Link>
+        <Link href="/teacher/dashboard" className="text-purple-600 hover:underline mt-2 inline-block">На главную</Link>
       </div>
     )
   }
 
-  const getResponseForQuestion = (questionId: string) => {
-    return submission.responses.find(r => r.questionId === questionId)
-  }
+  const getResponseForQuestion = (questionId: string) =>
+    submission.responses.find(r => r.questionId === questionId)
 
   return (
     <div className="max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-start gap-4 mb-8">
-        <Link
-          href={`/teacher/assignments/${assignmentId}`}
-          className="p-2 rounded-lg hover:bg-gray-100 transition mt-1"
-        >
+        <Link href={`/teacher/assignments/${assignmentId}`} className="p-2 rounded-lg hover:bg-gray-100 transition mt-1">
           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -174,11 +164,12 @@ export default function GradeSubmissionPage() {
         </div>
       )}
 
-      {/* Assignment title */}
+      {/* Assignment info */}
       <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 mb-6">
         <p className="text-purple-700 font-medium">{submission.assignment.title}</p>
         <p className="text-purple-500 text-sm mt-0.5">
-          {submission.assignment.type === 'TEST' ? 'Тест' : 'Текстовый ответ'}
+          {submission.assignment.type === 'TEST' ? 'Тест' :
+           submission.assignment.type === 'VOICE' ? 'Голосовой ответ' : 'Текстовый ответ'}
         </p>
         {submission.assignment.description && (
           <p className="text-purple-600 text-sm mt-2">{submission.assignment.description}</p>
@@ -187,7 +178,26 @@ export default function GradeSubmissionPage() {
 
       {/* Answers */}
       <div className="space-y-4 mb-6">
-        {submission.assignment.type === 'TEXT' ? (
+        {submission.assignment.type === 'VOICE' ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="font-medium text-gray-700 mb-4">Голосовой ответ студента</h3>
+            {submission.voiceUrl ? (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                  </div>
+                  <span className="text-orange-700 font-medium text-sm">Аудиозапись ответа</span>
+                </div>
+                <audio src={submission.voiceUrl} controls className="w-full" />
+              </div>
+            ) : (
+              <p className="text-gray-400 italic text-sm">Голосовой ответ не предоставлен</p>
+            )}
+          </div>
+        ) : submission.assignment.type === 'TEXT' ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="font-medium text-gray-700 mb-3">Ответ студента</h3>
             <div className="bg-gray-50 rounded-lg p-4 min-h-[120px]">
@@ -224,37 +234,20 @@ export default function GradeSubmissionPage() {
                     if (isCorrect && isSelected) {
                       containerClass = 'bg-green-50 border-green-300'
                       textClass = 'text-green-800 font-medium'
-                      icon = (
-                        <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )
+                      icon = <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                     } else if (!isCorrect && isSelected) {
                       containerClass = 'bg-red-50 border-red-300'
                       textClass = 'text-red-800 font-medium'
-                      icon = (
-                        <svg className="w-4 h-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      )
+                      icon = <svg className="w-4 h-4 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     } else if (isCorrect) {
                       containerClass = 'bg-green-50 border-green-200'
                       textClass = 'text-green-700'
-                      icon = (
-                        <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )
+                      icon = <svg className="w-4 h-4 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                     }
 
                     return (
-                      <div
-                        key={option.id}
-                        className={`flex items-center gap-3 p-3 rounded-lg border ${containerClass}`}
-                      >
-                        <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
-                          isSelected ? 'border-purple-600 bg-purple-600' : 'border-gray-300'
-                        }`} />
+                      <div key={option.id} className={`flex items-center gap-3 p-3 rounded-lg border ${containerClass}`}>
+                        <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${isSelected ? 'border-purple-600 bg-purple-600' : 'border-gray-300'}`} />
                         <span className={`flex-1 text-sm ${textClass}`}>{option.text}</span>
                         {icon}
                       </div>
@@ -262,7 +255,6 @@ export default function GradeSubmissionPage() {
                   })}
                 </div>
 
-                {/* Answer summary for this question */}
                 <div className="ml-10 mt-3">
                   {!response ? (
                     <p className="text-xs text-gray-400 italic">Нет ответа</p>
@@ -271,9 +263,7 @@ export default function GradeSubmissionPage() {
                   ) : (
                     <div>
                       <p className="text-xs text-red-600 font-medium">Неправильный ответ</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        Правильный: {question.options.find(o => o.isCorrect)?.text}
-                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">Правильный: {question.options.find(o => o.isCorrect)?.text}</p>
                     </div>
                   )}
                 </div>
@@ -283,14 +273,12 @@ export default function GradeSubmissionPage() {
         )}
       </div>
 
-      {/* Grade Form */}
+      {/* Grade form */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h2 className="font-semibold text-gray-900 mb-4">Выставить оценку</h2>
 
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-            {error}
-          </div>
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">{error}</div>
         )}
 
         <div className="mb-4">
@@ -305,13 +293,12 @@ export default function GradeSubmissionPage() {
               value={grade}
               onChange={(e) => setGrade(e.target.value)}
               placeholder="Например, 85"
-              className="w-40 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+              className="w-40 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
             />
             {grade && !isNaN(parseInt(grade)) && (
               <span className={`text-2xl font-bold ${
                 parseInt(grade) >= 90 ? 'text-green-600' :
-                parseInt(grade) >= 70 ? 'text-yellow-600' :
-                'text-red-600'
+                parseInt(grade) >= 70 ? 'text-yellow-600' : 'text-red-600'
               }`}>
                 {parseInt(grade)}/100
               </span>
@@ -320,15 +307,13 @@ export default function GradeSubmissionPage() {
         </div>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Комментарий к оценке
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Комментарий к оценке</label>
           <textarea
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
             placeholder="Напишите комментарий для студента..."
             rows={4}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900 resize-none"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900 resize-none"
           />
         </div>
 

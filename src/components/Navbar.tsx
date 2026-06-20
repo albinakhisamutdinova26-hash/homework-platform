@@ -17,6 +17,7 @@ export default function Navbar() {
 
   const studentLinks = [
     { href: '/student/dashboard', label: 'Мои задания' },
+    { href: '/student/profile', label: 'Профиль' },
   ]
 
   const links = isTeacher ? teacherLinks : studentLinks
@@ -43,7 +44,7 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    pathname === link.href
+                    pathname === link.href || pathname.startsWith(link.href + '/')
                       ? 'bg-white/20 text-white'
                       : 'text-purple-100 hover:bg-white/10 hover:text-white'
                   }`}
@@ -55,16 +56,27 @@ export default function Navbar() {
           </div>
 
           {/* User Info & Logout */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            {/* Avatar for students */}
+            {!isTeacher && (
+              <Link href="/student/profile" className="flex-shrink-0">
+                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-semibold text-sm hover:bg-white/30 transition overflow-hidden">
+                  {session?.user?.name?.[0] || '?'}
+                </div>
+              </Link>
+            )}
+
             <div className="hidden sm:flex flex-col items-end">
               <span className="text-white text-sm font-medium">{session?.user?.name}</span>
-              <span className="text-purple-200 text-xs">
-                {isTeacher ? 'Преподаватель' : 'Студент'}
-              </span>
+              <span className="text-purple-200 text-xs">{isTeacher ? 'Преподаватель' : 'Студент'}</span>
             </div>
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-              {session?.user?.name?.[0] || '?'}
-            </div>
+
+            {isTeacher && (
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                {session?.user?.name?.[0] || '?'}
+              </div>
+            )}
+
             <button
               onClick={() => signOut({ callbackUrl: '/auth/login' })}
               className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition"

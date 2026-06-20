@@ -12,13 +12,12 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { assignmentId, responses, textAnswer } = body
+    const { assignmentId, responses, textAnswer, voiceUrl } = body
 
     if (!assignmentId) {
       return NextResponse.json({ error: 'ID задания обязателен' }, { status: 400 })
     }
 
-    // Fetch the assignment
     const assignment = await prisma.assignment.findUnique({
       where: { id: assignmentId },
       include: { questions: true },
@@ -28,12 +27,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 })
     }
 
-    // Check deadline
     if (new Date(assignment.deadline) < new Date()) {
       return NextResponse.json({ error: 'Срок сдачи задания истёк' }, { status: 400 })
     }
 
-    // Check duplicate submission
     const existing = await prisma.submission.findUnique({
       where: {
         assignmentId_studentId: {
@@ -51,7 +48,6 @@ export async function POST(request: NextRequest) {
       if (!textAnswer?.trim()) {
         return NextResponse.json({ error: 'Текстовый ответ обязателен' }, { status: 400 })
       }
-
       const submission = await prisma.submission.create({
         data: {
           assignmentId,
@@ -60,7 +56,21 @@ export async function POST(request: NextRequest) {
           textAnswer: textAnswer.trim(),
         },
       })
+      return NextResponse.json(submission, { status: 201 })
+    }
 
+    if (assignment.type === 'VOICE') {
+      if (!voiceUrl) {
+        return NextResponse.json({ error: 'Голосовой ответ обязателен' }, { status: 400 })
+      }
+      const submission = await prisma.submission.create({
+        data: {
+          assignmentId,
+          studentId: session.user.id,
+          status: 'SUBMITTED',
+          voiceUrl,
+        },
+      })
       return NextResponse.json(submission, { status: 201 })
     }
 
@@ -84,9 +94,7 @@ export async function POST(request: NextRequest) {
         },
         include: {
           responses: {
-            include: {
-              selectedOption: true,
-            },
+            include: { selectedOption: true },
           },
         },
       })

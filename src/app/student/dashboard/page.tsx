@@ -2,13 +2,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import MotivationalCat from '@/components/MotivationalCat'
 
 function getDeadlineStatus(deadline: Date) {
   const now = new Date()
-  const deadlineDate = new Date(deadline)
-  const diffMs = deadlineDate.getTime() - now.getTime()
+  const diffMs = new Date(deadline).getTime() - now.getTime()
   const diffHours = diffMs / (1000 * 60 * 60)
-
   if (diffMs < 0) return 'passed'
   if (diffHours <= 24) return 'soon'
   return 'ok'
@@ -16,34 +15,26 @@ function getDeadlineStatus(deadline: Date) {
 
 function formatDate(date: Date) {
   return new Date(date).toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
   })
 }
 
 export default async function StudentDashboard() {
   const session = await getServerSession(authOptions)
 
-  const [assignedLinks, submissions] = await Promise.all([
+  const [assignedLinks, submissions, user] = await Promise.all([
     prisma.assignmentStudent.findMany({
       where: { studentId: session!.user.id },
-      include: {
-        assignment: true,
-      },
-      orderBy: {
-        assignment: { deadline: 'asc' },
-      },
+      include: { assignment: true },
+      orderBy: { assignment: { deadline: 'asc' } },
     }),
     prisma.submission.findMany({
       where: { studentId: session!.user.id },
-      select: {
-        assignmentId: true,
-        status: true,
-        grade: true,
-      },
+      select: { assignmentId: true, status: true, grade: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: session!.user.id },
+      select: { name: true, avatar: true, goal: true },
     }),
   ])
 
@@ -53,12 +44,46 @@ export default async function StudentDashboard() {
   const pendingCount = assignments.filter(
     a => !submissionMap.has(a.id) && new Date(a.deadline) > new Date()
   ).length
+  const completedCount = submissions.filter(s => s.status === 'GRADED' || s.status === 'SUBMITTED').length
+
+  const TYPE_ICON: Record<string, string> = { TEXT: '✏️', TEST: '📝', VOICE: '🎤' }
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Мои задания</h1>
-        <p className="text-gray-500 mt-1">Учебные задания от преподавателя</p>
+      {/* Motivational banner */}
+      <div className="mb-8 bg-gradient-to-r from-purple-50 to-orange-50 border border-purple-100 rounded-2xl p-6 flex items-center gap-6">
+        <div className="flex-shrink-0">
+          <MotivationalCat size={80} />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-bold text-gray-900 text-lg">Привет, {user?.name?.split(' ')[0]}!</span>
+          </div>
+          {user?.goal ? (
+            <div>
+              <p className="text-gray-600 text-sm mb-1">Твоя цель:</p>
+              <p className="text-purple-700 font-semibold">«{user.goal}»</p>
+              {completedCount > 0 && (
+                <p className="text-orange-500 text-sm mt-2 font-medium">
+                  🌟 {completedCount} {completedCount === 1 ? 'задание выполнено' : completedCount < 5 ? 'задания выполнено' : 'заданий выполнено'} — ты всё ближе к цели!
+                </p>
+              )}
+            </div>
+          ) : (
+            <div>
+              <p className="text-gray-500 text-sm">Установи цель, и я буду следить за твоим прогрессом!</p>
+              <Link href="/student/profile" className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-800 text-sm font-medium mt-1 underline">
+                Добавить цель →
+              </Link>
+            </div>
+          )}
+        </div>
+        {pendingCount > 0 && (
+          <div className="flex-shrink-0 text-center bg-white rounded-xl border border-orange-200 px-4 py-3 shadow-sm">
+            <div className="text-2xl font-bold text-orange-500">{pendingCount}</div>
+            <div className="text-xs text-gray-500">не сдано</div>
+          </div>
+        )}
       </div>
 
       {/* Stats */}
@@ -81,7 +106,11 @@ export default async function StudentDashboard() {
         </div>
       </div>
 
-      {/* Assignment Cards */}
+      {/* Assignment cards */}
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="font-semibold text-gray-900 text-lg">Мои задания</h2>
+      </div>
+
       {assignments.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-16 text-center">
           <p className="text-gray-500">Заданий пока нет</p>
@@ -94,37 +123,21 @@ export default async function StudentDashboard() {
             const isOverdue = deadlineStatus === 'passed'
 
             return (
-              <div
-                key={assignment.id}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col"
-              >
+              <div key={assignment.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex flex-col">
                 <div className="flex items-center justify-between mb-3">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    assignment.type === 'TEST'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-green-100 text-green-700'
-                  }`}>
-                    {assignment.type === 'TEST' ? 'Тест' : 'Текст'}
-                  </span>
-
+                  <span className="text-lg" title={assignment.type}>{TYPE_ICON[assignment.type] || '📄'}</span>
                   {submission ? (
                     submission.status === 'GRADED' ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                         Оценка: {submission.grade}/100
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                        Сдано
-                      </span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">Сдано</span>
                     )
                   ) : isOverdue ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">
-                      Срок истёк
-                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">Срок истёк</span>
                   ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                      Не сдано
-                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Не сдано</span>
                   )}
                 </div>
 
@@ -146,8 +159,7 @@ export default async function StudentDashboard() {
                   </svg>
                   <span className={`text-xs ${
                     deadlineStatus === 'passed' ? 'text-red-500' :
-                    deadlineStatus === 'soon' ? 'text-yellow-600' :
-                    'text-gray-500'
+                    deadlineStatus === 'soon' ? 'text-yellow-600' : 'text-gray-500'
                   }`}>
                     {isOverdue ? 'Истёк: ' : 'До: '}{formatDate(assignment.deadline)}
                   </span>

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { title, description, deadline, type, questions, studentIds } = body
+    const { title, description, deadline, type, questions, studentIds, media } = body
 
     if (!title?.trim()) {
       return NextResponse.json({ error: 'Название обязательно' }, { status: 400 })
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     if (!deadline) {
       return NextResponse.json({ error: 'Дедлайн обязателен' }, { status: 400 })
     }
-    if (!['TEST', 'TEXT'].includes(type)) {
+    if (!['TEST', 'TEXT', 'VOICE'].includes(type)) {
       return NextResponse.json({ error: 'Неверный тип задания' }, { status: 400 })
     }
     if (!studentIds || studentIds.length === 0) {
@@ -64,6 +64,14 @@ export async function POST(request: NextRequest) {
                 isCorrect: Boolean(o.isCorrect),
               })),
             },
+          })),
+        } : undefined,
+        media: media && media.length > 0 ? {
+          create: media.map((m: any, index: number) => ({
+            type: m.type,
+            url: m.url,
+            title: m.title?.trim() || null,
+            orderIndex: index,
           })),
         } : undefined,
       },

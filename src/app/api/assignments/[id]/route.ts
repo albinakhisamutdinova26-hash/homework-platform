@@ -23,11 +23,13 @@ export async function GET(
               select: {
                 id: true,
                 text: true,
-                // Only include isCorrect for teachers
                 ...(session.user.role === 'TEACHER' ? { isCorrect: true } : {}),
               },
             },
           },
+          orderBy: { orderIndex: 'asc' },
+        },
+        media: {
           orderBy: { orderIndex: 'asc' },
         },
         _count: {
@@ -40,7 +42,6 @@ export async function GET(
       return NextResponse.json({ error: 'Задание не найдено' }, { status: 404 })
     }
 
-    // Get student's submission if student
     let submission = null
     if (session.user.role === 'STUDENT') {
       submission = await prisma.submission.findUnique({

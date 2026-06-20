@@ -13,6 +13,8 @@ model User {
   phone               String               @unique
   password            String
   role                String               @default("STUDENT")
+  avatar              String?
+  goal                String?
   assignments         Assignment[]         @relation("TeacherAssignments")
   submissions         Submission[]
   assignedAssignments AssignmentStudent[]
@@ -30,7 +32,18 @@ model Assignment {
   questions        Question[]
   submissions      Submission[]
   assignedStudents AssignmentStudent[]
+  media            AssignmentMedia[]
   createdAt        DateTime            @default(now())
+}
+
+model AssignmentMedia {
+  id           String     @id @default(cuid())
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  assignmentId String
+  type         String
+  url          String
+  title        String?
+  orderIndex   Int        @default(0)
 }
 
 model AssignmentStudent {
@@ -71,6 +84,7 @@ model Submission {
   grade            Int?
   feedback         String?
   textAnswer       String?
+  voiceUrl         String?
   responses        SubmissionResponse[]
   submittedAt      DateTime             @default(now())
   gradedAt         DateTime?
