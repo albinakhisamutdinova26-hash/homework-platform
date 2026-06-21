@@ -21,73 +21,105 @@ export default function Navbar() {
   ]
 
   const links = isTeacher ? teacherLinks : studentLinks
+  const firstName = session?.user?.name?.split(' ')[0] || ''
+  const lastName = session?.user?.name?.split(' ')[1]?.[0] || ''
+  const initials = session?.user?.name?.[0] || '?'
 
   return (
-    <nav className="bg-purple-600 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo & Title */}
-          <div className="flex items-center gap-8">
-            <Link href={isTeacher ? '/teacher/dashboard' : '/student/dashboard'} className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
-              <span className="text-white font-semibold text-lg hidden sm:block">Учебная платформа</span>
-            </Link>
-
-            {/* Navigation Links */}
-            <div className="hidden md:flex items-center gap-1">
-              {links.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    pathname === link.href || pathname.startsWith(link.href + '/')
-                      ? 'bg-white/20 text-white'
-                      : 'text-purple-100 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
+    <nav
+      className="h-[66px] flex items-center justify-between px-[30px]"
+      style={{
+        background: 'linear-gradient(120deg,#6D3BEB 0%,#8B5CF6 60%,#A472F0 100%)',
+        boxShadow: '0 8px 26px rgba(109,59,235,.20)',
+      }}
+    >
+      {/* Left: logo + links */}
+      <div className="flex items-center gap-[34px]">
+        <Link
+          href={isTeacher ? '/teacher/dashboard' : '/student/dashboard'}
+          className="flex items-center gap-[11px]"
+        >
+          <div
+            className="w-[38px] h-[38px] rounded-[13px] flex items-center justify-center font-display font-extrabold text-[17px] text-white"
+            style={{ background: 'rgba(255,255,255,.18)' }}
+          >
+            Aa
           </div>
+          <span className="font-display font-bold text-[19px] text-white tracking-[.01em]">
+            English&nbsp;Class
+          </span>
+        </Link>
 
-          {/* User Info & Logout */}
-          <div className="flex items-center gap-3">
-            {/* Avatar for students */}
-            {!isTeacher && (
-              <Link href="/student/profile" className="flex-shrink-0">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-semibold text-sm hover:bg-white/30 transition overflow-hidden">
-                  {session?.user?.name?.[0] || '?'}
-                </div>
+        <div className="flex gap-[6px]">
+          {links.map((link) => {
+            const isActive = pathname === link.href || pathname.startsWith(link.href + '/')
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="px-[16px] py-[8px] rounded-[11px] font-sans text-[14px] transition"
+                style={
+                  isActive
+                    ? { background: 'rgba(255,255,255,.22)', color: '#fff', fontWeight: 700 }
+                    : { color: '#E4D8FB', fontWeight: 600 }
+                }
+              >
+                {link.label}
               </Link>
-            )}
+            )
+          })}
+        </div>
+      </div>
 
-            <div className="hidden sm:flex flex-col items-end">
-              <span className="text-white text-sm font-medium">{session?.user?.name}</span>
-              <span className="text-purple-200 text-xs">{isTeacher ? 'Преподаватель' : 'Студент'}</span>
-            </div>
+      {/* Right: user info */}
+      <div className="flex items-center gap-[12px]">
+        {!isTeacher && (
+          <div
+            className="flex items-center gap-[7px] px-[12px] py-[6px] rounded-full"
+            style={{ background: 'rgba(255,255,255,.16)' }}
+          >
+            <span className="text-[15px]">🔥</span>
+            <span className="font-sans font-extrabold text-[13px] text-white">7 дней</span>
+          </div>
+        )}
 
-            {isTeacher && (
-              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                {session?.user?.name?.[0] || '?'}
-              </div>
-            )}
-
-            <button
-              onClick={() => signOut({ callbackUrl: '/auth/login' })}
-              className="flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              <span className="hidden sm:block">Выйти</span>
-            </button>
+        <div className="text-right leading-[1.15]">
+          <div className="font-sans font-extrabold text-[14px] text-white">
+            {firstName}{lastName ? ` ${lastName}.` : ''}
+          </div>
+          <div className="font-sans font-semibold text-[12px] text-[#D8C9F8]">
+            {isTeacher ? 'Преподаватель' : 'Студент'}
           </div>
         </div>
+
+        {!isTeacher ? (
+          <Link href="/student/profile">
+            <div className="w-[40px] h-[40px] rounded-full flex items-center justify-center font-sans font-extrabold text-[16px] cursor-pointer"
+              style={{ background: '#FFD9E6', color: '#C2477E' }}>
+              {initials}
+            </div>
+          </Link>
+        ) : (
+          <div
+            className="w-[40px] h-[40px] rounded-full flex items-center justify-center font-sans font-extrabold text-[16px] text-white"
+            style={{ background: 'rgba(255,255,255,.20)' }}
+          >
+            {initials}
+          </div>
+        )}
+
+        <button
+          onClick={() => signOut({ callbackUrl: '/auth/login' })}
+          className="flex items-center gap-[6px] px-[12px] py-[7px] rounded-[10px] font-sans text-[13px] font-semibold text-white transition"
+          style={{ background: 'rgba(255,255,255,.12)' }}
+          onMouseOver={e => (e.currentTarget.style.background = 'rgba(255,255,255,.22)')}
+          onMouseOut={e => (e.currentTarget.style.background = 'rgba(255,255,255,.12)')}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Выйти
+        </button>
       </div>
     </nav>
   )

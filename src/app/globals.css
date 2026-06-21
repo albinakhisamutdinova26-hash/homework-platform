@@ -1,3 +1,29 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-9px); }
+}
+@keyframes popin {
+  0%   { transform: scale(.5); opacity: 0; }
+  60%  { transform: scale(1.18); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0); }
+  50%       { transform: translate(18px, -14px); }
+}
+@keyframes spark {
+  0%   { opacity: 0; transform: scale(0) rotate(0deg); }
+  50%  { opacity: 1; transform: scale(1.15) rotate(160deg); }
+  100% { opacity: 0; transform: scale(0) rotate(320deg); }
+}
+
+.animate-floaty  { animation: floaty 4.5s ease-in-out infinite; }
+.animate-drift   { animation: drift 9s ease-in-out infinite; }
+.animate-drift-slow { animation: drift 11s ease-in-out infinite; }
+.animate-popin   { animation: popin .6s ease; }
+.animate-spark   { animation: spark 1.6s ease-in-out infinite; }
+.animate-spark-delay { animation: spark 1.6s ease-in-out .5s infinite; }

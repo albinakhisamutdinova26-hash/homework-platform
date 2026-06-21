@@ -13,8 +13,19 @@ function formatDate(date: Date) {
   })
 }
 
-function isDeadlinePassed(deadline: Date) {
-  return new Date(deadline) < new Date()
+function getDeadlineStatus(deadline: Date) {
+  const now = new Date()
+  const diff = new Date(deadline).getTime() - now.getTime()
+  if (diff < 0) return 'passed'
+  if (diff <= 24 * 3600 * 1000) return 'soon'
+  return 'ok'
+}
+
+const TYPE_CONFIG: Record<string, { icon: string; label: string; bg: string; color: string }> = {
+  TEXT:  { icon: '✏️', label: 'Текст',       bg: '#FCEAF1', color: '#C2477E' },
+  TEST:  { icon: '📝', label: 'Тест',         bg: '#F1ECFE', color: '#6D3BEB' },
+  VOICE: { icon: '🎤', label: 'Голос',        bg: '#FCEAF1', color: '#C2477E' },
+  AUDIO: { icon: '🎧', label: 'Аудио',        bg: '#EAF0FF', color: '#3E63DD' },
 }
 
 export default async function TeacherDashboard() {
@@ -23,139 +34,144 @@ export default async function TeacherDashboard() {
   const assignments = await prisma.assignment.findMany({
     where: { teacherId: session!.user.id },
     include: {
-      _count: {
-        select: { submissions: true, assignedStudents: true },
-      },
-      submissions: {
-        select: { status: true },
-      },
+      _count: { select: { submissions: true, assignedStudents: true } },
+      submissions: { select: { status: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
 
+  const totalAssigned = assignments.reduce((sum, a) => sum + a._count.assignedStudents, 0)
+  const totalSubmitted = assignments.reduce((sum, a) => sum + a._count.submissions, 0)
+
   return (
-    <div>
+    <div style={{ maxWidth: 980, margin: '0 auto', padding: '30px 28px 70px' }}>
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-[24px]">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Мои задания</h1>
-          <p className="text-gray-500 mt-1">Управление учебными заданиями</p>
+          <h1 className="font-display font-bold text-[26px] text-[#2E2350]">Мои задания</h1>
+          <p className="font-sans font-semibold text-[14px] text-[#867DA0] mt-[3px]">Управление учебными заданиями</p>
         </div>
         <Link
           href="/teacher/assignments/new"
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium px-5 py-2.5 rounded-lg transition shadow-sm"
+          className="inline-flex items-center gap-[8px] font-sans font-extrabold text-[14.5px] text-white rounded-[14px] px-[20px] py-[12px] transition"
+          style={{ background: 'linear-gradient(120deg,#6D3BEB,#8B5CF6)', boxShadow: '0 10px 22px rgba(109,59,235,.28)' }}
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Создать задание
+          ＋ Создать задание
         </Link>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="text-3xl font-bold text-purple-600">{assignments.length}</div>
-          <div className="text-gray-500 text-sm mt-1">Всего заданий</div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="text-3xl font-bold text-purple-600">
-            {assignments.reduce((sum, a) => sum + a._count.assignedStudents, 0)}
+      <div className="grid grid-cols-3 gap-[16px] mb-[24px]">
+        {[
+          { value: assignments.length, label: 'Всего заданий' },
+          { value: totalAssigned,      label: 'Назначено студентам' },
+          { value: totalSubmitted,     label: 'Сдано работ' },
+        ].map(({ value, label }) => (
+          <div
+            key={label}
+            className="bg-white rounded-[20px]"
+            style={{ border: '1px solid #EFEAFB', padding: 20, boxShadow: '0 6px 20px rgba(89,54,177,.05)' }}
+          >
+            <div className="font-display font-extrabold text-[30px] text-[#6D3BEB] leading-none">{value}</div>
+            <div className="font-sans font-semibold text-[13px] text-[#867DA0] mt-[4px]">{label}</div>
           </div>
-          <div className="text-gray-500 text-sm mt-1">Назначено</div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="text-3xl font-bold text-purple-600">
-            {assignments.reduce((sum, a) => sum + a._count.submissions, 0)}
-          </div>
-          <div className="text-gray-500 text-sm mt-1">Сдано работ</div>
-        </div>
+        ))}
       </div>
 
-      {/* Assignments Table */}
+      {/* Table */}
       {assignments.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-16 text-center">
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+        <div
+          className="bg-white rounded-[22px] text-center py-16"
+          style={{ border: '1px solid #EFEAFB', boxShadow: '0 6px 22px rgba(89,54,177,.06)' }}
+        >
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: '#F1ECFE' }}>
+            <span className="text-3xl">📋</span>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Заданий пока нет</h3>
-          <p className="text-gray-500 mb-6">Создайте первое задание для студентов</p>
+          <h3 className="font-display font-bold text-[18px] text-[#2E2350] mb-[8px]">Заданий пока нет</h3>
+          <p className="font-sans font-semibold text-[14px] text-[#928AAC] mb-6">Создайте первое задание для студентов</p>
           <Link
             href="/teacher/assignments/new"
-            className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-medium px-5 py-2.5 rounded-lg transition"
+            className="inline-flex items-center gap-2 font-sans font-bold text-[14px] text-white rounded-[12px] px-5 py-3"
+            style={{ background: 'linear-gradient(120deg,#6D3BEB,#8B5CF6)' }}
           >
-            Создать задание
+            ＋ Создать задание
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-purple-50 border-b border-purple-100">
-                <th className="text-left px-6 py-4 text-sm font-semibold text-purple-900">Название</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-purple-900">Тип</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-purple-900">Дедлайн</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-purple-900">Сдано</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-purple-900">Проверено</th>
-                <th className="px-6 py-4"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {assignments.map((assignment) => {
-                const gradedCount = assignment.submissions.filter(s => s.status === 'GRADED').length
-                const submittedCount = assignment._count.submissions
-                const assignedCount = assignment._count.assignedStudents
-                const passed = isDeadlinePassed(assignment.deadline)
+        <div className="bg-white rounded-[22px] overflow-hidden" style={{ border: '1px solid #EFEAFB', boxShadow: '0 6px 22px rgba(89,54,177,.06)' }}>
+          {/* Table header */}
+          <div
+            className="grid gap-[14px] font-sans font-extrabold text-[12px] text-[#6D3BEB] uppercase tracking-[.04em]"
+            style={{ gridTemplateColumns: '2.6fr 1fr 1.4fr 1.4fr 0.9fr', padding: '15px 24px', background: '#F6F1FE' }}
+          >
+            <span>Название</span>
+            <span>Тип</span>
+            <span>Дедлайн</span>
+            <span>Сдано</span>
+            <span></span>
+          </div>
 
-                return (
-                  <tr key={assignment.id} className="hover:bg-purple-50/30 transition">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">{assignment.title}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        assignment.type === 'TEST'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-green-100 text-green-700'
-                      }`}>
-                        {assignment.type === 'TEST' ? 'Тест' : 'Текст'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`text-sm ${passed ? 'text-red-500' : 'text-gray-600'}`}>
-                        {formatDate(assignment.deadline)}
-                        {passed && <span className="ml-1 text-xs">(истёк)</span>}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 bg-gray-200 rounded-full h-1.5">
-                          <div
-                            className="bg-purple-600 h-1.5 rounded-full"
-                            style={{ width: `${assignedCount > 0 ? (submittedCount / assignedCount) * 100 : 0}%` }}
-                          />
-                        </div>
-                        <span className="text-sm text-gray-600">{submittedCount}/{assignedCount}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-600">{gradedCount}/{submittedCount}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/teacher/assignments/${assignment.id}`}
-                        className="text-purple-600 hover:text-purple-800 text-sm font-medium"
-                      >
-                        Просмотр →
-                      </Link>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          {assignments.map((assignment, idx) => {
+            const submittedCount = assignment._count.submissions
+            const assignedCount = assignment._count.assignedStudents
+            const pct = assignedCount > 0 ? (submittedCount / assignedCount) * 100 : 0
+            const dlStatus = getDeadlineStatus(assignment.deadline)
+            const typeConf = TYPE_CONFIG[assignment.type] || TYPE_CONFIG.TEXT
+
+            const dlColor = dlStatus === 'passed' ? '#928AAC' : dlStatus === 'soon' ? '#D14343' : '#928AAC'
+
+            return (
+              <div
+                key={assignment.id}
+                className="grid gap-[14px] items-center"
+                style={{
+                  gridTemplateColumns: '2.6fr 1fr 1.4fr 1.4fr 0.9fr',
+                  padding: '16px 24px',
+                  borderTop: idx === 0 ? 'none' : '1px solid #F2EEFA',
+                }}
+              >
+                <span className="font-sans font-bold text-[14.5px] text-[#241B3A]">{assignment.title}</span>
+
+                <span>
+                  <span
+                    className="inline-flex items-center gap-[5px] font-sans font-bold text-[11px] rounded-[8px]"
+                    style={{ background: typeConf.bg, color: typeConf.color, padding: '4px 9px' }}
+                  >
+                    {typeConf.icon} {typeConf.label}
+                  </span>
+                </span>
+
+                <span className="font-sans font-bold text-[12.5px]" style={{ color: dlColor }}>
+                  {formatDate(assignment.deadline)}
+                  {dlStatus === 'passed' && (
+                    <span className="ml-1 font-sans text-[11px] text-[#C99]">(истёк)</span>
+                  )}
+                </span>
+
+                <span className="flex items-center gap-[8px]">
+                  <span className="flex-1 h-[6px] rounded-full overflow-hidden" style={{ background: '#EDE6FB' }}>
+                    <span
+                      className="block h-full rounded-full"
+                      style={{ width: `${pct}%`, background: '#6D3BEB' }}
+                    />
+                  </span>
+                  <span className="font-sans font-bold text-[12px] text-[#867DA0] flex-shrink-0">
+                    {submittedCount}/{assignedCount}
+                  </span>
+                </span>
+
+                <span className="text-right">
+                  <Link
+                    href={`/teacher/assignments/${assignment.id}`}
+                    className="font-sans font-bold text-[13px] text-[#6D3BEB] hover:underline"
+                  >
+                    Просмотр →
+                  </Link>
+                </span>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
