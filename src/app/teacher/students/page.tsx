@@ -49,31 +49,45 @@ export default function StudentsPage() {
     e.preventDefault()
     setSaving(true)
     setError('')
-    const res = await fetch('/api/students', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, password }),
-    })
-    const data = await res.json()
-    if (!res.ok) {
-      setError(data.error)
+    try {
+      const res = await fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || 'Ошибка при добавлении студента')
+        return
+      }
+      setStudents(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name, 'ru')))
+      setName('')
+      setPhone('')
+      setPassword('')
+      setShowForm(false)
+    } catch {
+      setError('Не удалось соединиться с сервером. Попробуйте снова.')
+    } finally {
       setSaving(false)
-      return
     }
-    setStudents(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name, 'ru')))
-    setName('')
-    setPhone('')
-    setPassword('')
-    setShowForm(false)
-    setSaving(false)
   }
 
   async function handleDelete(id: string, studentName: string) {
     if (!confirm(`Удалить студента "${studentName}"? Все его задания и ответы тоже удалятся.`)) return
     setDeletingId(id)
-    await fetch(`/api/students/${id}`, { method: 'DELETE' })
-    setStudents(prev => prev.filter(s => s.id !== id))
-    setDeletingId(null)
+    try {
+      const res = await fetch(`/api/students/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || 'Не удалось удалить студента')
+        return
+      }
+      setStudents(prev => prev.filter(s => s.id !== id))
+    } catch {
+      alert('Не удалось соединиться с сервером. Попробуйте снова.')
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (

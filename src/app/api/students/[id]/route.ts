@@ -9,6 +9,11 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: 'Доступ запрещён' }, { status: 403 })
   }
 
-  await prisma.user.delete({ where: { id: params.id } })
-  return NextResponse.json({ ok: true })
+  try {
+    await prisma.user.delete({ where: { id: params.id } })
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    console.error('Delete student error:', e)
+    return NextResponse.json({ error: 'Не удалось удалить студента' }, { status: 500 })
+  }
 }

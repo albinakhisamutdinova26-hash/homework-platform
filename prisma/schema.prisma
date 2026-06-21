@@ -49,7 +49,7 @@ model AssignmentMedia {
 model AssignmentStudent {
   assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   assignmentId String
-  student      User       @relation(fields: [studentId], references: [id])
+  student      User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId    String
 
   @@id([assignmentId, studentId])
@@ -76,9 +76,9 @@ model AnswerOption {
 
 model Submission {
   id               String               @id @default(cuid())
-  assignment       Assignment           @relation(fields: [assignmentId], references: [id])
+  assignment       Assignment           @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   assignmentId     String
-  student          User                 @relation(fields: [studentId], references: [id])
+  student          User                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
   studentId        String
   status           String               @default("SUBMITTED")
   grade            Int?
